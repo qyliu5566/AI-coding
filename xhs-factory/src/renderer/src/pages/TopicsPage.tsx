@@ -240,6 +240,7 @@ export default function TopicsPage(): React.JSX.Element {
                             <Badge variant={t.status === 'selected' ? 'default' : 'muted'}>
                               {STATUS_LABEL[t.status]}
                             </Badge>
+                            {t.score != null && <Badge variant="success">{t.score}分</Badge>}
                           </div>
                           {t.angle && (
                             <p className="text-sm text-muted-foreground">

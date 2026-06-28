@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { Plus, Trash2, Flame, Wand2 } from 'lucide-react'
+import { Plus, Trash2, Flame, Wand2, Layers3 } from 'lucide-react'
 import { PageHeader, EmptyState } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -17,7 +17,7 @@ import {
   DialogTrigger
 } from '@/components/ui/dialog'
 import { unwrap } from '@/lib/ipc'
-import type { ViralSample, ViralSampleInput } from '@shared/types'
+import type { FormulaPattern, ViralSample, ViralSampleInput } from '@shared/types'
 
 function splitTags(text: string): string[] {
   return Array.from(
@@ -123,13 +123,87 @@ function AddDialog({ onSaved }: { onSaved: () => void }): React.JSX.Element {
   )
 }
 
+function BatchDialog({ onSaved }: { onSaved: () => void }): React.JSX.Element {
+  const [open, setOpen] = useState(false)
+  const [text, setText] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const save = async (): Promise<void> => {
+    const items = text
+      .split(/\n-{3,}\n/)
+      .map((block) => block.trim())
+      .filter(Boolean)
+      .map((block) => {
+        const [title = '', ...rest] = block.split('\n')
+        return {
+          personaId: null,
+          title: title.replace(/^标题[:：]\s*/, '').trim(),
+          body: rest.join('\n').trim(),
+          tags: [],
+          notes: '批量导入'
+        }
+      })
+      .filter((item) => item.title)
+    if (!items.length) {
+      toast.error('请至少粘贴一条带标题的样本')
+      return
+    }
+    setSaving(true)
+    try {
+      await unwrap(window.api.viral.createBatch(items))
+      toast.success(`已导入 ${items.length} 条样本`)
+      setText('')
+      setOpen(false)
+      onSaved()
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline">
+          <Layers3 className="h-4 w-4" />
+          批量导入
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>批量导入爆款样本</DialogTitle>
+        </DialogHeader>
+        <Textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          className="min-h-72 leading-relaxed"
+          placeholder={
+            '每条样本用一行 --- 分隔\n标题：第一条爆款标题\n正文内容...\n---\n标题：第二条爆款标题\n正文内容...'
+          }
+        />
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            取消
+          </Button>
+          <Button onClick={save} disabled={saving}>
+            {saving ? '导入中…' : '导入'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export default function ViralPage(): React.JSX.Element {
   const [samples, setSamples] = useState<ViralSample[]>([])
+  const [formulas, setFormulas] = useState<FormulaPattern[]>([])
   const [analyzing, setAnalyzing] = useState<number | null>(null)
 
   const load = async (): Promise<void> => {
     try {
       setSamples(await unwrap(window.api.viral.list()))
+      setFormulas(await unwrap(window.api.formula.list()))
     } catch (e) {
       toast.error((e as Error).message)
     }
@@ -162,12 +236,27 @@ export default function ViralPage(): React.JSX.Element {
     }
   }
 
+  const createFormula = async (s: ViralSample): Promise<void> => {
+    try {
+      await unwrap(window.api.formula.createFromSample(s.id))
+      toast.success('已沉淀为爆款公式')
+      setFormulas(await unwrap(window.api.formula.list()))
+    } catch (e) {
+      toast.error((e as Error).message)
+    }
+  }
+
   return (
     <div>
       <PageHeader
         title="爆款库"
         description="收录对标爆款，AI 拆解其套路，反哺选题与创作"
-        actions={<AddDialog onSaved={load} />}
+        actions={
+          <>
+            <BatchDialog onSaved={load} />
+            <AddDialog onSaved={load} />
+          </>
+        }
       />
 
       <div className="px-8 py-6">
@@ -230,6 +319,10 @@ export default function ViralPage(): React.JSX.Element {
                         <Wand2 className="h-4 w-4" />
                         {analyzing === s.id ? '拆解中…' : s.structure ? '重新拆解' : 'AI 拆解'}
                       </Button>
+                      <Button size="sm" variant="ghost" onClick={() => createFormula(s)}>
+                        <Layers3 className="h-4 w-4" />
+                        沉淀公式
+                      </Button>
                       <Button size="sm" variant="ghost" onClick={() => remove(s)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -239,6 +332,31 @@ export default function ViralPage(): React.JSX.Element {
               </Card>
             ))}
           </div>
+        )}
+
+        {formulas.length > 0 && (
+          <section className="mt-8 space-y-3">
+            <h2 className="text-sm font-semibold text-muted-foreground">爆款公式库</h2>
+            <div className="grid gap-3">
+              {formulas.map((f) => (
+                <Card key={f.id}>
+                  <CardContent className="space-y-2 pt-5">
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium">{f.name}</div>
+                      <Badge variant="secondary">
+                        {f.sourceType === 'viral' ? '爆款样本' : '草稿'}
+                      </Badge>
+                    </div>
+                    <div className="grid gap-1 text-xs text-muted-foreground">
+                      <div>钩子：{f.hookType || '未填写'}</div>
+                      <div>结构：{f.structure || '未填写'}</div>
+                      <div>CTA：{f.cta || '未填写'}</div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </section>
         )}
       </div>
     </div>

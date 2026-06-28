@@ -6,6 +6,10 @@ import * as drafts from '../services/draftService'
 import * as viral from '../services/viralService'
 import * as settings from '../services/settingsService'
 import * as exporter from '../services/exportService'
+import * as publish from '../services/publishService'
+import * as analytics from '../services/analyticsService'
+import * as formula from '../services/formulaService'
+import * as compliance from '../services/complianceService'
 import { generateContent } from '../services/contentService'
 import { hasApiKey, setApiKey } from '../secrets'
 import { getDb, schema } from '../db/client'
@@ -56,8 +60,33 @@ export function registerIpc(): void {
   // ---- 爆款样本 ----
   handle(IPC.viral.list, () => viral.listSamples())
   handle(IPC.viral.create, (_e, input) => viral.createSample(input))
+  handle(IPC.viral.createBatch, (_e, input) => viral.createSamples(input))
   handle(IPC.viral.remove, (_e, id: number) => viral.removeSample(id))
   handle(IPC.viral.analyze, (_e, id: number) => viral.analyzeSample(id))
+
+  // ---- 发布闭环 ----
+  handle(IPC.publish.list, (_e, filters) => publish.listPublishRecords(filters))
+  handle(IPC.publish.create, (_e, input) => publish.createPublishRecord(input))
+  handle(IPC.publish.update, (_e, id: number, patch) => publish.updatePublishRecord(id, patch))
+  handle(IPC.publish.remove, (_e, id: number) => publish.removePublishRecord(id))
+  handle(IPC.publish.updateMetrics, (_e, id: number, metrics) => publish.updateMetrics(id, metrics))
+  handle(IPC.publish.review, (_e, id: number) => publish.reviewPublishRecord(id))
+
+  // ---- 复盘分析 ----
+  handle(IPC.analytics.overview, () => analytics.getOverview())
+  handle(IPC.analytics.persona, () => analytics.getPersonaAnalytics())
+  handle(IPC.analytics.topicTags, () => analytics.getTagAnalytics())
+  handle(IPC.analytics.formulas, () => analytics.getFormulaAnalytics())
+
+  // ---- 公式库 ----
+  handle(IPC.formula.list, (_e, personaId?: number) => formula.listFormulas(personaId))
+  handle(IPC.formula.create, (_e, input) => formula.createFormula(input))
+  handle(IPC.formula.createFromSample, (_e, sampleId: number) => formula.createFromSample(sampleId))
+  handle(IPC.formula.createFromDraft, (_e, draftId: number) => formula.createFromDraft(draftId))
+  handle(IPC.formula.remove, (_e, id: number) => formula.removeFormula(id))
+
+  // ---- 合规检查 ----
+  handle(IPC.compliance.check, (_e, input) => compliance.checkCompliance(input))
 
   // ---- 设置 ----
   handle(IPC.settings.get, () => settings.getSettings())

@@ -38,6 +38,14 @@ export function createSample(input: unknown): ViralSample {
   return getDb().insert(schema.viralSamples).values(data).returning().get()
 }
 
+export function createSamples(input: unknown): ViralSample[] {
+  const data = z.array(sampleInput).parse(input)
+  if (!data.length) return []
+  return getDb().transaction((tx) =>
+    data.map((sample) => tx.insert(schema.viralSamples).values(sample).returning().get())
+  )
+}
+
 export function setStructure(id: number, structure: ViralStructure): ViralSample {
   const row = getDb()
     .update(schema.viralSamples)

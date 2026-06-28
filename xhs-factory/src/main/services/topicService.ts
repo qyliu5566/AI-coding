@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm'
+import { and, desc, eq, gte } from 'drizzle-orm'
 import { z } from 'zod'
 import { getDb, schema } from '../db/client'
 import type { Topic, TopicStatus, GenerateTopicsInput } from '@shared/types'
@@ -65,10 +65,31 @@ export async function generateTopics(input: GenerateTopicsInput): Promise<Topic[
   const persona = getPersona(personaId)
   if (!persona) throw new Error('请先选择一个人设')
   const samples = getSamplesByIds(sampleIds)
-
-  const generated = await getProvider().generateTopics({ persona, keywords, count, samples })
-
   const db = getDb()
+  const highScoreTopics = db
+    .select()
+    .from(schema.topics)
+    .where(and(eq(schema.topics.personaId, personaId), gte(schema.topics.score, 70)))
+    .orderBy(desc(schema.topics.score))
+    .limit(8)
+    .all()
+  const formulas = db
+    .select()
+    .from(schema.formulaPatterns)
+    .where(eq(schema.formulaPatterns.personaId, personaId))
+    .orderBy(desc(schema.formulaPatterns.createdAt))
+    .limit(6)
+    .all()
+
+  const generated = await getProvider().generateTopics({
+    persona,
+    keywords,
+    count,
+    samples,
+    highScoreTopics,
+    formulas
+  })
+
   return db.transaction((tx) =>
     generated.map((g) =>
       tx

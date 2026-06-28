@@ -4,7 +4,8 @@ import type {
   ViralStructure,
   Persona,
   Topic,
-  ViralSample
+  ViralSample,
+  FormulaPattern
 } from '@shared/types'
 
 // 选题生成上下文（已解析好的领域对象，Provider 只管调用模型）
@@ -13,6 +14,8 @@ export interface TopicGenContext {
   keywords: string
   count: number
   samples: ViralSample[]
+  highScoreTopics?: Topic[]
+  formulas?: FormulaPattern[]
 }
 
 // 创作生成上下文

@@ -9,6 +9,17 @@ import type {
   DraftUpdate,
   ViralSample,
   ViralSampleInput,
+  PublishRecord,
+  PublishRecordInput,
+  PublishRecordUpdate,
+  PublishMetricInput,
+  PublishStatus,
+  FormulaPattern,
+  FormulaPatternInput,
+  ComplianceIssue,
+  AnalyticsOverview,
+  PersonaAnalytics,
+  TagAnalytics,
   AppSettings,
   ProviderId,
   GenerateTopicsInput,
@@ -43,8 +54,44 @@ export interface Api {
   viral: {
     list: () => Promise<IpcResult<ViralSample[]>>
     create: (input: ViralSampleInput) => Promise<IpcResult<ViralSample>>
+    createBatch: (input: ViralSampleInput[]) => Promise<IpcResult<ViralSample[]>>
     remove: (id: number) => Promise<IpcResult<void>>
     analyze: (id: number) => Promise<IpcResult<ViralSample>>
+  }
+  publish: {
+    list: (filters?: {
+      personaId?: number
+      status?: PublishStatus
+      from?: number
+      to?: number
+    }) => Promise<IpcResult<PublishRecord[]>>
+    create: (input: PublishRecordInput) => Promise<IpcResult<PublishRecord>>
+    update: (id: number, patch: PublishRecordUpdate) => Promise<IpcResult<PublishRecord>>
+    remove: (id: number) => Promise<IpcResult<void>>
+    updateMetrics: (id: number, metrics: PublishMetricInput) => Promise<IpcResult<PublishRecord>>
+    review: (id: number) => Promise<IpcResult<PublishRecord>>
+  }
+  analytics: {
+    overview: () => Promise<IpcResult<AnalyticsOverview>>
+    persona: () => Promise<IpcResult<PersonaAnalytics[]>>
+    topicTags: () => Promise<IpcResult<TagAnalytics[]>>
+    formulas: () => Promise<
+      IpcResult<Array<{ id: number; name: string; sourceType: string; uses: number }>>
+    >
+  }
+  formula: {
+    list: (personaId?: number) => Promise<IpcResult<FormulaPattern[]>>
+    create: (input: FormulaPatternInput) => Promise<IpcResult<FormulaPattern>>
+    createFromSample: (sampleId: number) => Promise<IpcResult<FormulaPattern>>
+    createFromDraft: (draftId: number) => Promise<IpcResult<FormulaPattern>>
+    remove: (id: number) => Promise<IpcResult<void>>
+  }
+  compliance: {
+    check: (input: {
+      title?: string
+      body?: string
+      tags?: string[]
+    }) => Promise<IpcResult<ComplianceIssue[]>>
   }
   settings: {
     get: () => Promise<IpcResult<AppSettings>>

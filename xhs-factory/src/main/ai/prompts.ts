@@ -1,4 +1,4 @@
-import type { Persona, ViralSample, Topic } from '@shared/types'
+import type { Persona, ViralSample, Topic, FormulaPattern } from '@shared/types'
 
 // 所有 prompt 模板集中在此，与代码解耦，便于持续迭代。
 
@@ -28,6 +28,27 @@ function samplesBlock(samples: ViralSample[]): string {
   return `\n\n以下是该账号方向的爆款样本，请学习其选题角度与表达结构（不要照抄内容）：\n${items}`
 }
 
+function historyBlock(topics: Topic[] = [], formulas: FormulaPattern[] = []): string {
+  const parts: string[] = []
+  if (topics.length) {
+    parts.push(
+      `历史高分选题（优先学习方向，不要重复标题）：\n${topics
+        .slice(0, 8)
+        .map((t) => `- ${t.title}（分数 ${t.score ?? 0}）：${t.rationale || t.hook}`)
+        .join('\n')}`
+    )
+  }
+  if (formulas.length) {
+    parts.push(
+      `已沉淀爆款公式（可复用结构，不要照搬内容）：\n${formulas
+        .slice(0, 6)
+        .map((f) => `- ${f.name}：钩子=${f.hookType}；结构=${f.structure}；CTA=${f.cta}`)
+        .join('\n')}`
+    )
+  }
+  return parts.length ? `\n\n${parts.join('\n\n')}` : ''
+}
+
 export const XHS_SYSTEM = `你是资深的小红书内容操盘手，深谙平台的流量逻辑与用户心理。你的输出要符合小红书调性：
 - 标题有钩子、戳痛点或制造好奇，常用数字、对比、悬念、身份认同
 - 正文口语化、短句分段、适度使用 emoji，结构为"痛点开头 → 干货/故事 → 行动号召(CTA)"
@@ -39,9 +60,14 @@ export function topicsPrompt(ctx: {
   keywords: string
   count: number
   samples: ViralSample[]
+  highScoreTopics?: Topic[]
+  formulas?: FormulaPattern[]
 }): string {
   const kw = ctx.keywords ? `\n\n本轮选题方向/关键词：${ctx.keywords}` : ''
-  return `${personaBlock(ctx.persona)}${kw}${samplesBlock(ctx.samples)}
+  return `${personaBlock(ctx.persona)}${kw}${samplesBlock(ctx.samples)}${historyBlock(
+    ctx.highScoreTopics,
+    ctx.formulas
+  )}
 
 请为这个账号产出 ${ctx.count} 个**互不重复**、有爆款潜质的小红书选题。每个选题包含：
 - title：选题标题方向（一句话，可直接作为笔记标题的雏形）

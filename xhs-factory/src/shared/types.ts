@@ -86,6 +86,110 @@ export interface AppSettings {
   model: string
 }
 
+export type PublishStatus = 'planned' | 'published' | 'reviewed' | 'archived'
+
+export interface PublishRecord {
+  id: number
+  draftId: number
+  topicId: number | null
+  personaId: number
+  status: PublishStatus
+  plannedAt: number | null
+  publishedAt: number | null
+  publishUrl: string
+  noteId: string
+  views: number
+  likes: number
+  collects: number
+  comments: number
+  shares: number
+  follows: number
+  notes: string
+  createdAt: number
+  updatedAt: number
+}
+
+export type PublishRecordInput = Partial<
+  Pick<
+    PublishRecord,
+    | 'topicId'
+    | 'status'
+    | 'plannedAt'
+    | 'publishedAt'
+    | 'publishUrl'
+    | 'noteId'
+    | 'views'
+    | 'likes'
+    | 'collects'
+    | 'comments'
+    | 'shares'
+    | 'follows'
+    | 'notes'
+  >
+> & {
+  draftId: number
+  personaId: number
+}
+
+export type PublishRecordUpdate = Partial<Omit<PublishRecordInput, 'draftId' | 'personaId'>>
+export type PublishMetricInput = Pick<
+  PublishRecord,
+  'views' | 'likes' | 'collects' | 'comments' | 'shares' | 'follows'
+>
+
+export interface FormulaPattern {
+  id: number
+  personaId: number | null
+  sourceType: 'viral' | 'draft'
+  sourceId: number | null
+  name: string
+  hookType: string
+  opening: string
+  structure: string
+  cta: string
+  applicableNiche: string
+  audience: string
+  notes: string
+  createdAt: number
+}
+
+export interface FormulaPatternInput extends Omit<
+  FormulaPattern,
+  'id' | 'createdAt' | 'sourceType' | 'sourceId'
+> {
+  sourceType?: 'viral' | 'draft'
+  sourceId?: number | null
+}
+
+export type ComplianceSeverity = 'low' | 'medium' | 'high'
+export interface ComplianceIssue {
+  ruleId: number | null
+  severity: ComplianceSeverity
+  category: string
+  matchedText: string
+  message: string
+  suggestion: string
+}
+
+export interface AnalyticsOverview {
+  totalPublished: number
+  reviewedCount: number
+  avgInteractionRate: number
+  avgCollectRate: number
+  highScoreTopics: number
+}
+
+export interface PersonaAnalytics extends AnalyticsOverview {
+  personaId: number
+  personaName: string
+}
+
+export interface TagAnalytics {
+  tag: string
+  count: number
+  avgScore: number
+}
+
 // ---------- AI 生成的结构化产物 ----------
 export interface GeneratedTopic {
   title: string
@@ -160,8 +264,33 @@ export const IPC = {
   viral: {
     list: 'viral:list',
     create: 'viral:create',
+    createBatch: 'viral:createBatch',
     remove: 'viral:remove',
     analyze: 'viral:analyze'
+  },
+  publish: {
+    list: 'publish:list',
+    create: 'publish:create',
+    update: 'publish:update',
+    remove: 'publish:remove',
+    updateMetrics: 'publish:updateMetrics',
+    review: 'publish:review'
+  },
+  analytics: {
+    overview: 'analytics:overview',
+    persona: 'analytics:persona',
+    topicTags: 'analytics:topicTags',
+    formulas: 'analytics:formulas'
+  },
+  formula: {
+    list: 'formula:list',
+    create: 'formula:create',
+    createFromSample: 'formula:createFromSample',
+    createFromDraft: 'formula:createFromDraft',
+    remove: 'formula:remove'
+  },
+  compliance: {
+    check: 'compliance:check'
   },
   settings: {
     get: 'settings:get',

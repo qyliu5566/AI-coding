@@ -241,9 +241,7 @@ export default function SettingsPage(): React.JSX.Element {
                     <SelectContent>
                       <SelectItem value="claude">Claude（推荐）</SelectItem>
                       <SelectItem value="deepseek">DeepSeek</SelectItem>
-                      <SelectItem value="openai" disabled>
-                        OpenAI（即将支持）
-                      </SelectItem>
+                      <SelectItem value="openai">OpenAI</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

@@ -31,8 +31,33 @@ const api = {
   viral: {
     list: () => invoke(IPC.viral.list),
     create: (input: unknown) => invoke(IPC.viral.create, input),
+    createBatch: (input: unknown) => invoke(IPC.viral.createBatch, input),
     remove: (id: number) => invoke(IPC.viral.remove, id),
     analyze: (id: number) => invoke(IPC.viral.analyze, id)
+  },
+  publish: {
+    list: (filters?: unknown) => invoke(IPC.publish.list, filters),
+    create: (input: unknown) => invoke(IPC.publish.create, input),
+    update: (id: number, patch: unknown) => invoke(IPC.publish.update, id, patch),
+    remove: (id: number) => invoke(IPC.publish.remove, id),
+    updateMetrics: (id: number, metrics: unknown) => invoke(IPC.publish.updateMetrics, id, metrics),
+    review: (id: number) => invoke(IPC.publish.review, id)
+  },
+  analytics: {
+    overview: () => invoke(IPC.analytics.overview),
+    persona: () => invoke(IPC.analytics.persona),
+    topicTags: () => invoke(IPC.analytics.topicTags),
+    formulas: () => invoke(IPC.analytics.formulas)
+  },
+  formula: {
+    list: (personaId?: number) => invoke(IPC.formula.list, personaId),
+    create: (input: unknown) => invoke(IPC.formula.create, input),
+    createFromSample: (sampleId: number) => invoke(IPC.formula.createFromSample, sampleId),
+    createFromDraft: (draftId: number) => invoke(IPC.formula.createFromDraft, draftId),
+    remove: (id: number) => invoke(IPC.formula.remove, id)
+  },
+  compliance: {
+    check: (input: unknown) => invoke(IPC.compliance.check, input)
   },
   settings: {
     get: () => invoke(IPC.settings.get),

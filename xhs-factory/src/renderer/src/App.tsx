@@ -1,6 +1,15 @@
 import { useEffect } from 'react'
 import { NavLink, Route, Routes } from 'react-router-dom'
-import { Lightbulb, PenLine, FileText, Flame, Settings, Sparkles } from 'lucide-react'
+import {
+  Lightbulb,
+  PenLine,
+  FileText,
+  Flame,
+  Settings,
+  Sparkles,
+  CalendarDays,
+  BarChart3
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAppStore } from '@/store/app'
 import { Toaster } from '@/components/ui/sonner'
@@ -9,11 +18,15 @@ import ComposePage from '@/pages/ComposePage'
 import DraftsPage from '@/pages/DraftsPage'
 import ViralPage from '@/pages/ViralPage'
 import SettingsPage from '@/pages/SettingsPage'
+import PublishPage from '@/pages/PublishPage'
+import AnalyticsPage from '@/pages/AnalyticsPage'
 
 const NAV = [
   { to: '/', label: '选题', icon: Lightbulb, end: true },
   { to: '/compose', label: '创作', icon: PenLine, end: false },
   { to: '/drafts', label: '草稿库', icon: FileText, end: false },
+  { to: '/publish', label: '发布/日历', icon: CalendarDays, end: false },
+  { to: '/analytics', label: '复盘', icon: BarChart3, end: false },
   { to: '/viral', label: '爆款库', icon: Flame, end: false },
   { to: '/settings', label: '设置', icon: Settings, end: false }
 ]
@@ -71,6 +84,8 @@ function App(): React.JSX.Element {
           <Route path="/compose" element={<ComposePage />} />
           <Route path="/compose/:topicId" element={<ComposePage />} />
           <Route path="/drafts" element={<DraftsPage />} />
+          <Route path="/publish" element={<PublishPage />} />
+          <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/viral" element={<ViralPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>

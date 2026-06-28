@@ -1,6 +1,16 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { Copy, FileDown, Pencil, Trash2, FileText, CheckCircle2 } from 'lucide-react'
+import {
+  Copy,
+  FileDown,
+  Pencil,
+  Trash2,
+  FileText,
+  CheckCircle2,
+  CalendarPlus,
+  ShieldCheck,
+  Wand2
+} from 'lucide-react'
 import { PageHeader, EmptyState } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -17,7 +27,7 @@ import {
   DialogTitle
 } from '@/components/ui/dialog'
 import { unwrap } from '@/lib/ipc'
-import type { Draft, DraftStatus } from '@shared/types'
+import type { ComplianceIssue, Draft, DraftStatus } from '@shared/types'
 
 function splitTags(text: string): string[] {
   return Array.from(
@@ -143,6 +153,8 @@ export default function DraftsPage(): React.JSX.Element {
   const [filter, setFilter] = useState<'all' | DraftStatus>('all')
   const [editing, setEditing] = useState<Draft | null>(null)
   const [editOpen, setEditOpen] = useState(false)
+  const [issues, setIssues] = useState<ComplianceIssue[] | null>(null)
+  const [checkingId, setCheckingId] = useState<number | null>(null)
 
   const load = async (): Promise<void> => {
     try {
@@ -178,6 +190,52 @@ export default function DraftsPage(): React.JSX.Element {
         window.api.draft.update(d.id, { status: d.status === 'final' ? 'draft' : 'final' })
       )
       setDrafts((prev) => prev.map((x) => (x.id === d.id ? updated : x)))
+    } catch (e) {
+      toast.error((e as Error).message)
+    }
+  }
+
+  const addToPlan = async (d: Draft): Promise<void> => {
+    try {
+      await unwrap(
+        window.api.publish.create({
+          draftId: d.id,
+          topicId: d.topicId,
+          personaId: d.personaId,
+          status: 'planned'
+        })
+      )
+      toast.success('已加入发布计划')
+    } catch (e) {
+      toast.error((e as Error).message)
+    }
+  }
+
+  const checkCompliance = async (d: Draft): Promise<void> => {
+    setCheckingId(d.id)
+    try {
+      const result = await unwrap(
+        window.api.compliance.check({
+          title: d.titleOptions[0] ?? '',
+          body: d.body,
+          tags: d.tags
+        })
+      )
+      setIssues(result)
+      toast[result.length ? 'warning' : 'success'](
+        result.length ? `发现 ${result.length} 个合规提示` : '未发现明显合规风险'
+      )
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setCheckingId(null)
+    }
+  }
+
+  const createFormula = async (d: Draft): Promise<void> => {
+    try {
+      await unwrap(window.api.formula.createFromDraft(d.id))
+      toast.success('已沉淀为爆款公式')
     } catch (e) {
       toast.error((e as Error).message)
     }
@@ -251,6 +309,25 @@ export default function DraftsPage(): React.JSX.Element {
                         <FileDown className="h-4 w-4" />
                         导出
                       </Button>
+                      {d.status === 'final' && (
+                        <Button size="sm" variant="outline" onClick={() => addToPlan(d)}>
+                          <CalendarPlus className="h-4 w-4" />
+                          加入计划
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => checkCompliance(d)}
+                        disabled={checkingId === d.id}
+                      >
+                        <ShieldCheck className="h-4 w-4" />
+                        {checkingId === d.id ? '检查中' : '合规'}
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => createFormula(d)}>
+                        <Wand2 className="h-4 w-4" />
+                        沉淀公式
+                      </Button>
                       <Button
                         size="sm"
                         variant="ghost"
@@ -284,6 +361,35 @@ export default function DraftsPage(): React.JSX.Element {
         onOpenChange={setEditOpen}
         onSaved={(d) => setDrafts((prev) => prev.map((x) => (x.id === d.id ? d : x)))}
       />
+      <Dialog open={issues != null} onOpenChange={(open) => !open && setIssues(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>合规检查</DialogTitle>
+          </DialogHeader>
+          {!issues?.length ? (
+            <div className="py-6 text-sm text-muted-foreground">未发现明显合规风险。</div>
+          ) : (
+            <div className="grid max-h-[60vh] gap-2 overflow-y-auto">
+              {issues.map((issue, i) => (
+                <div key={`${issue.matchedText}-${i}`} className="rounded-md border p-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Badge variant={issue.severity === 'high' ? 'default' : 'secondary'}>
+                      {issue.severity}
+                    </Badge>
+                    <span className="font-medium">{issue.category}</span>
+                    <span className="text-muted-foreground">命中：{issue.matchedText}</span>
+                  </div>
+                  <div className="mt-2 text-muted-foreground">{issue.message}</div>
+                  <div className="mt-1 text-muted-foreground">建议：{issue.suggestion}</div>
+                </div>
+              ))}
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setIssues(null)}>知道了</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
