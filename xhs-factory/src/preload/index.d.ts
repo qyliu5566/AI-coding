@@ -21,9 +21,16 @@ import type {
   PersonaAnalytics,
   TagAnalytics,
   AppSettings,
-  ProviderId,
+  SecretProviderId,
   GenerateTopicsInput,
   GeneratedContent,
+  ContentReview,
+  RewriteContentInput,
+  RewriteSelectionInput,
+  GenerateVisualPlanInput,
+  VisualPlan,
+  GenerateImageInput,
+  GeneratedImageAsset,
   ContentChunkEvent
 } from '@shared/types'
 
@@ -96,12 +103,17 @@ export interface Api {
   settings: {
     get: () => Promise<IpcResult<AppSettings>>
     set: (input: AppSettings) => Promise<IpcResult<AppSettings>>
-    getApiKey: (provider: ProviderId) => Promise<IpcResult<boolean>>
-    setApiKey: (provider: ProviderId, key: string) => Promise<IpcResult<boolean>>
+    getApiKey: (provider: SecretProviderId) => Promise<IpcResult<boolean>>
+    setApiKey: (provider: SecretProviderId, key: string) => Promise<IpcResult<boolean>>
   }
   exporter: {
     copy: (text: string) => Promise<IpcResult<boolean>>
-    markdown: (draftId: number) => Promise<IpcResult<{ saved: boolean; path?: string }>>
+    markdown: (
+      draftId: number
+    ) => Promise<IpcResult<{ saved: boolean; folderPath?: string; markdownPath?: string }>>
+  }
+  asset: {
+    imageDataUrl: (localPath: string) => Promise<IpcResult<string>>
   }
   ai: {
     generateContent: (input: {
@@ -109,6 +121,14 @@ export interface Api {
       topicId: number
       sampleIds?: number[]
     }) => Promise<IpcResult<GeneratedContent>>
+    reviewContent: (input: {
+      topicId: number
+      currentContent: GeneratedContent
+    }) => Promise<IpcResult<ContentReview>>
+    rewriteContent: (input: RewriteContentInput) => Promise<IpcResult<GeneratedContent>>
+    rewriteSelection: (input: RewriteSelectionInput) => Promise<IpcResult<string>>
+    generateVisualPlan: (input: GenerateVisualPlanInput) => Promise<IpcResult<VisualPlan>>
+    generateImage: (input: GenerateImageInput) => Promise<IpcResult<GeneratedImageAsset>>
     onContentChunk: (cb: (e: ContentChunkEvent) => void) => () => void
   }
 }

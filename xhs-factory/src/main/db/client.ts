@@ -127,6 +127,11 @@ const MIGRATIONS: string[][] = [
     `INSERT INTO compliance_rules (keyword, category, severity, message, suggestion)
       SELECT '全网最低', '营销风险', 'medium', '价格类绝对化表述风险较高', '改为“我看到的低价”“近期好价”'
       WHERE NOT EXISTS (SELECT 1 FROM compliance_rules WHERE keyword = '全网最低')`
+  ],
+  // v3 — 草稿持久化视觉方案和已生成图片资产
+  [
+    `ALTER TABLE drafts ADD COLUMN visual_plan TEXT DEFAULT NULL`,
+    `ALTER TABLE drafts ADD COLUMN image_assets TEXT NOT NULL DEFAULT '{}'`
   ]
 ]
 

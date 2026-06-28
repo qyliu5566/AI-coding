@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/select'
 import { unwrap } from '@/lib/ipc'
 import { useAppStore } from '@/store/app'
-import type { AppSettings, Persona, PersonaInput, ProviderId } from '@shared/types'
+import type { AppSettings, ImageProviderId, Persona, PersonaInput, ProviderId } from '@shared/types'
 
 const EMPTY: PersonaInput = { name: '', niche: '', tone: '', audience: '', bio: '' }
 
@@ -34,6 +34,10 @@ const DEFAULT_MODELS: Record<ProviderId, string> = {
   claude: 'claude-opus-4-8',
   deepseek: 'deepseek-chat',
   openai: 'gpt-4o'
+}
+const DEFAULT_IMAGE_MODELS: Record<ImageProviderId, string> = {
+  openai: 'gpt-image-1',
+  volcengine: 'doubao-seedream-5-0-260128'
 }
 
 function PersonaDialog({
@@ -146,15 +150,24 @@ export default function SettingsPage(): React.JSX.Element {
 
   const [settings, setSettings] = useState<AppSettings>({
     provider: 'claude',
-    model: 'claude-opus-4-8'
+    model: 'claude-opus-4-8',
+    imageProvider: 'openai',
+    imageModel: 'gpt-image-1',
+    imageSize: '1024x1536'
   })
   const [apiKey, setApiKey] = useState('')
   const [hasKey, setHasKey] = useState(false)
+  const [imageApiKey, setImageApiKey] = useState('')
+  const [hasImageKey, setHasImageKey] = useState(false)
   const [savingKey, setSavingKey] = useState(false)
+  const [savingImageKey, setSavingImageKey] = useState(false)
   const [savingModel, setSavingModel] = useState(false)
 
   const refreshKeyState = async (provider: ProviderId): Promise<void> => {
     setHasKey(await unwrap(window.api.settings.getApiKey(provider)))
+  }
+  const refreshImageKeyState = async (provider: ImageProviderId): Promise<void> => {
+    setHasImageKey(await unwrap(window.api.settings.getApiKey(`image:${provider}`)))
   }
 
   // 切换提供方：填默认模型 + 刷新对应密钥状态(密钥按提供方分别存)
@@ -164,12 +177,24 @@ export default function SettingsPage(): React.JSX.Element {
     void refreshKeyState(v)
   }
 
+  const onImageProviderChange = (v: ImageProviderId): void => {
+    setSettings((s) => ({
+      ...s,
+      imageProvider: v,
+      imageModel: DEFAULT_IMAGE_MODELS[v],
+      imageSize: v === 'volcengine' ? '2K' : '1024x1536'
+    }))
+    setImageApiKey('')
+    void refreshImageKeyState(v)
+  }
+
   useEffect(() => {
     void (async () => {
       try {
         const s = await unwrap(window.api.settings.get())
         setSettings(s)
         await refreshKeyState(s.provider)
+        await refreshImageKeyState(s.imageProvider)
       } catch (e) {
         toast.error((e as Error).message)
       }
@@ -179,7 +204,11 @@ export default function SettingsPage(): React.JSX.Element {
   const saveModel = async (): Promise<void> => {
     setSavingModel(true)
     try {
-      const s = await unwrap(window.api.settings.set(settings))
+      const next =
+        settings.imageProvider === 'volcengine'
+          ? { ...settings, imageSize: '2K' as const }
+          : settings
+      const s = await unwrap(window.api.settings.set(next))
       setSettings(s)
       await refreshKeyState(s.provider)
       toast.success('模型设置已保存')
@@ -205,6 +234,26 @@ export default function SettingsPage(): React.JSX.Element {
       toast.error((e as Error).message)
     } finally {
       setSavingKey(false)
+    }
+  }
+
+  const saveImageKey = async (): Promise<void> => {
+    if (!imageApiKey.trim()) {
+      toast.error('请填写视觉模型 API Key')
+      return
+    }
+    setSavingImageKey(true)
+    try {
+      const ok = await unwrap(
+        window.api.settings.setApiKey(`image:${settings.imageProvider}`, imageApiKey.trim())
+      )
+      setHasImageKey(ok)
+      setImageApiKey('')
+      toast.success('视觉模型 API Key 已加密保存')
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setSavingImageKey(false)
     }
   }
 
@@ -295,6 +344,108 @@ export default function SettingsPage(): React.JSX.Element {
                 </div>
                 <p className="mt-1.5 text-xs text-muted-foreground">
                   使用系统级加密(safeStorage)存储在本地，不会上传、不进入界面进程。
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* 视觉模型 */}
+        <section className="space-y-3">
+          <h2 className="text-sm font-semibold text-muted-foreground">视觉模型</h2>
+          <Card>
+            <CardContent className="grid gap-4 pt-5">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="grid gap-1.5">
+                  <Label>提供方</Label>
+                  <Select
+                    value={settings.imageProvider}
+                    onValueChange={(v) => onImageProviderChange(v as ImageProviderId)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="openai">OpenAI Images</SelectItem>
+                      <SelectItem value="volcengine">火山引擎 Ark</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-1.5">
+                  <Label>模型</Label>
+                  <Input
+                    value={settings.imageModel}
+                    onChange={(e) => setSettings((s) => ({ ...s, imageModel: e.target.value }))}
+                    placeholder="gpt-image-1"
+                  />
+                </div>
+                <div className="grid gap-1.5">
+                  <Label>尺寸</Label>
+                  <Select
+                    value={settings.imageSize}
+                    onValueChange={(v) =>
+                      setSettings((s) => ({ ...s, imageSize: v as AppSettings['imageSize'] }))
+                    }
+                    disabled={settings.imageProvider === 'volcengine'}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {settings.imageProvider === 'volcengine' ? (
+                        <SelectItem value="2K">火山 2K</SelectItem>
+                      ) : (
+                        <>
+                          <SelectItem value="1024x1536">竖图 1024x1536</SelectItem>
+                          <SelectItem value="1024x1024">方图 1024x1024</SelectItem>
+                          <SelectItem value="1536x1024">横图 1536x1024</SelectItem>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Button onClick={saveModel} disabled={savingModel} size="sm">
+                  {savingModel ? '保存中…' : '保存视觉模型设置'}
+                </Button>
+              </div>
+
+              <div className="border-t pt-4">
+                <div className="mb-1.5 flex items-center gap-2">
+                  <Label>视觉模型 API Key</Label>
+                  {hasImageKey ? (
+                    <Badge variant="success">
+                      <Check className="mr-1 h-3 w-3" />
+                      已配置
+                    </Badge>
+                  ) : (
+                    <Badge variant="muted">未配置</Badge>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <KeyRound className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="password"
+                      className="pl-8"
+                      value={imageApiKey}
+                      onChange={(e) => setImageApiKey(e.target.value)}
+                      placeholder={
+                        hasImageKey
+                          ? '已保存，输入可覆盖'
+                          : settings.imageProvider === 'volcengine'
+                            ? '火山引擎 Ark API Key'
+                            : 'sk-...（OpenAI API Key）'
+                      }
+                    />
+                  </div>
+                  <Button onClick={saveImageKey} disabled={savingImageKey} variant="outline">
+                    {savingImageKey ? '保存中…' : '保存 Key'}
+                  </Button>
+                </div>
+                <p className="mt-1.5 text-xs text-muted-foreground">
+                  视觉模型 Key 独立加密保存，用于创作页根据 Prompt 生成本地图片素材。
                 </p>
               </div>
             </CardContent>

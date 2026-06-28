@@ -17,11 +17,56 @@ export const metaOut = z.object({
   coverCopy: z.string().default(''),
   imageIdeas: z.array(z.string()).default([])
 })
+export const contentOut = metaOut.extend({
+  body: z.string().default('')
+})
 export const structureOut = z.object({
   hook: z.string().default(''),
   opening: z.string().default(''),
   structure: z.string().default(''),
   cta: z.string().default('')
+})
+export const reviewOut = z.object({
+  overallScore: z.number().int().min(0).max(100),
+  summary: z.string().default(''),
+  suggestions: z
+    .array(
+      z.object({
+        id: z.string(),
+        title: z.string(),
+        reason: z.string(),
+        instruction: z.string(),
+        target: z.enum(['title', 'body', 'tags', 'cover', 'overall'])
+      })
+    )
+    .default([])
+})
+export const selectionRewriteOut = z.object({
+  replacement: z.string().default('')
+})
+export const visualPlanOut = z.object({
+  cover: z.object({
+    title: z.string().default(''),
+    subtitle: z.string().default(''),
+    layout: z.string().default(''),
+    style: z.string().default(''),
+    colorPalette: z.string().default(''),
+    elements: z.array(z.string()).default([]),
+    prompt: z.string().default('')
+  }),
+  images: z
+    .array(
+      z.object({
+        id: z.string(),
+        purpose: z.string().default(''),
+        textOverlay: z.string().default(''),
+        scene: z.string().default(''),
+        composition: z.string().default(''),
+        style: z.string().default(''),
+        prompt: z.string().default('')
+      })
+    )
+    .default([])
 })
 
 // ---- JSON Schema（供支持 structured outputs 的模型使用）----
@@ -57,6 +102,18 @@ export const META_SCHEMA = {
   required: ['titleOptions', 'tags', 'coverCopy', 'imageIdeas'],
   additionalProperties: false
 }
+export const CONTENT_SCHEMA = {
+  type: 'object',
+  properties: {
+    titleOptions: { type: 'array', items: { type: 'string' } },
+    body: { type: 'string' },
+    tags: { type: 'array', items: { type: 'string' } },
+    coverCopy: { type: 'string' },
+    imageIdeas: { type: 'array', items: { type: 'string' } }
+  },
+  required: ['titleOptions', 'body', 'tags', 'coverCopy', 'imageIdeas'],
+  additionalProperties: false
+}
 export const STRUCTURE_SCHEMA = {
   type: 'object',
   properties: {
@@ -66,6 +123,76 @@ export const STRUCTURE_SCHEMA = {
     cta: { type: 'string' }
   },
   required: ['hook', 'opening', 'structure', 'cta'],
+  additionalProperties: false
+}
+export const REVIEW_SCHEMA = {
+  type: 'object',
+  properties: {
+    overallScore: { type: 'number' },
+    summary: { type: 'string' },
+    suggestions: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          title: { type: 'string' },
+          reason: { type: 'string' },
+          instruction: { type: 'string' },
+          target: { type: 'string', enum: ['title', 'body', 'tags', 'cover', 'overall'] }
+        },
+        required: ['id', 'title', 'reason', 'instruction', 'target'],
+        additionalProperties: false
+      }
+    }
+  },
+  required: ['overallScore', 'summary', 'suggestions'],
+  additionalProperties: false
+}
+export const SELECTION_REWRITE_SCHEMA = {
+  type: 'object',
+  properties: {
+    replacement: { type: 'string' }
+  },
+  required: ['replacement'],
+  additionalProperties: false
+}
+export const VISUAL_PLAN_SCHEMA = {
+  type: 'object',
+  properties: {
+    cover: {
+      type: 'object',
+      properties: {
+        title: { type: 'string' },
+        subtitle: { type: 'string' },
+        layout: { type: 'string' },
+        style: { type: 'string' },
+        colorPalette: { type: 'string' },
+        elements: { type: 'array', items: { type: 'string' } },
+        prompt: { type: 'string' }
+      },
+      required: ['title', 'subtitle', 'layout', 'style', 'colorPalette', 'elements', 'prompt'],
+      additionalProperties: false
+    },
+    images: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          id: { type: 'string' },
+          purpose: { type: 'string' },
+          textOverlay: { type: 'string' },
+          scene: { type: 'string' },
+          composition: { type: 'string' },
+          style: { type: 'string' },
+          prompt: { type: 'string' }
+        },
+        required: ['id', 'purpose', 'textOverlay', 'scene', 'composition', 'style', 'prompt'],
+        additionalProperties: false
+      }
+    }
+  },
+  required: ['cover', 'images'],
   additionalProperties: false
 }
 

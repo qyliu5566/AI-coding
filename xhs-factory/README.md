@@ -1,115 +1,140 @@
 # 小红书内容工厂（xhs-factory）
 
-> 一个**自用**的小红书内容生产桌面应用：用 AI 快速完成「选题 → 创作 → 成稿」，并逐步用历史数据迭代选题与内容质量。
+> 一个自用的小红书内容生产桌面应用：围绕「选题 → 创作 → 草稿 → 发布 → 数据回收 → 复盘」形成闭环。
 >
-> **当前版本：v0.2**（覆盖内容生产 + 手动发布数据回收 + 初步复盘闭环）
+> **当前版本：v0.5**（发布闭环 + 创作队列 + 视觉模型 + 草稿图片资产 + 资料包导出）
 
 ## 用途
 
-如果你在运营小红书账号，日常最耗时的就是**想选题**和**写文案**。这个工具把这两步自动化：
+如果你在运营小红书账号，日常最耗时的通常是想选题、写文案、做封面配图和复盘数据。这个工具把这些环节串成一个本地工作台：
 
-- 配置好账号「人设」（赛道、语气、目标人群）后，一键产出有爆款潜质的**选题**；
-- 选定选题后，AI 流式生成符合小红书调性的**完整笔记**（标题 / 正文 / 标签 / 封面文案 / 配图建议）；
-- 可手动微调后存入草稿库，**一键复制或导出**，再去 App 发布。
+- 按账号人设批量生成候选选题；
+- 将选题加入创作队列，生成完整笔记内容；
+- 对当前稿件做诊断、勾选修改建议、局部改写和版本回退；
+- 生成封面图与正文配图方案，并调用视觉模型生成图片；
+- 保存到草稿库，继续创作、复制、合规检查或导出完整资料包；
+- 记录发布计划和发布后数据，反哺选题评分、标签表现和爆款公式。
 
-所有数据都存在**你本地**，仅自己可见；API Key 经系统级加密存储，不上传、不进入界面进程。
+所有业务数据默认存放在本地 SQLite；API Key 使用 Electron `safeStorage` 加密保存在本机。
 
-## 基本功能（v0.1）
+## 当前功能（v0.5）
 
-| 模块           | 说明                                                                           |
-| -------------- | ------------------------------------------------------------------------------ |
-| **选题工作台** | 选人设 → AI 生成候选选题（可勾选爆款样本作参考）；管理候选 / 已选状态          |
-| **创作工作台** | 从选题生成多个标题 + **流式正文** + 标签 + 封面文案 + 配图建议，可编辑后存草稿 |
-| **草稿库**     | 按状态筛选、编辑、一键复制（标题+正文+标签）、导出 Markdown                    |
-| **发布/日历**  | 将已成稿内容加入发布计划，手动录入发布链接与表现数据                           |
-| **复盘看板**   | 按人设和标签汇总发布表现，并把复盘结果回写选题评分                             |
-| **爆款库**     | 收录对标爆文，AI 拆解其「钩子 / 开头 / 结构 / CTA」，反哺选题与创作            |
-| **爆款公式库** | 从爆款样本或高表现草稿沉淀可复用公式，反哺后续选题                             |
-| **合规检查**   | 基于本地规则检查敏感词、绝对化承诺与营销风险表达                               |
-| **设置**       | 配置 AI 提供方与密钥、管理账号人设                                             |
+| 模块 | 说明 |
+| --- | --- |
+| **选题工作台** | 按人设批量生成候选选题，可参考爆款样本，支持选用或直接进入创作 |
+| **创作队列** | 集中管理已选用、生成中、草稿未保存的话题，避免切页丢失创作状态 |
+| **创作工作台** | 生成标题、正文、标签、封面文案、配图建议；支持整篇改写、局部改写、版本管理 |
+| **视觉创作** | 生成封面与正文配图方案，支持调用 OpenAI Images 或火山引擎 Ark 生成图片 |
+| **草稿库** | 管理草稿/成稿，查看图片资产，继续创作原草稿，合规检查，沉淀公式 |
+| **资料包导出** | 导出 Markdown、视觉方案 JSON、图片目录和缺失图片清单，Markdown 使用相对图片路径 |
+| **发布/日历** | 将成稿加入发布计划，手动录入发布时间、链接、笔记 ID 和表现数据 |
+| **复盘看板** | 汇总人设、标签、选题表现， reviewed 后回写 topic score |
+| **爆款库/公式库** | 收录爆文并拆解结构，从爆款样本或高表现草稿沉淀公式 |
+| **合规检查** | 本地规则检查敏感词、绝对化承诺、营销风险和平台禁忌表达 |
+| **设置** | 管理文本模型、视觉模型、API Key 和账号人设 |
 
-**支持的 AI 提供方：**
+## 支持的模型
 
-- **Claude**（推荐，`claude-opus-4-8`）——自动识别两种凭证：
-  - 标准 API Key（`sk-ant-api...`，console.anthropic.com 创建）
-  - Claude Code / cc-switch 的 OAuth 令牌（`sk-ant-oat...`，自动走 Bearer + oauth 头）
-- **DeepSeek**（OpenAI 兼容，`deepseek-chat` / `deepseek-reasoner`）
+文本模型：
+
+- **Claude**：支持标准 API Key，也兼容 Claude Code / cc-switch OAuth 令牌
+- **OpenAI 兼容接口**：可用于 DeepSeek 等兼容服务
+- **DeepSeek**：`deepseek-chat` / `deepseek-reasoner`
+
+视觉模型：
+
+- **OpenAI Images**：默认 `gpt-image-1`
+- **火山引擎 Ark**：默认 `doubao-seedream-5-0-260128`，图片尺寸固定使用 `2K`
 
 ## 安装与使用
 
-> 环境要求：Node.js ≥ 20、macOS / Windows / Linux。
+环境要求：Node.js >= 20，macOS / Windows / Linux。
 
 ```bash
-# 1. 克隆
-git clone https://github.com/<your-account>/xhs-factory.git
+git clone https://github.com/qyliu5566/xhs-factory.git
 cd xhs-factory
-
-# 2. 安装依赖（postinstall 会自动为 Electron 重建 better-sqlite3 原生模块）
 npm install
-
-# 3. 启动开发
 npm run dev
 ```
 
 首次启动后：
 
-1. 进入 **设置** → 选择提供方、填入对应 API Key（DeepSeek 需在 platform.deepseek.com 充值后使用）→ 新建一个 **人设**；
-2. 回到 **选题**，生成候选选题；
-3. 点选题的「去创作」，生成内容、编辑、保存草稿；
-4. 在 **草稿库** 复制或导出，去小红书发布。
+1. 进入 **设置**，配置文本模型和视觉模型 API Key；
+2. 创建一个账号人设；
+3. 在 **选题** 批量生成候选话题；
+4. 点击 **选用** 加入创作队列，或点击 **去创作** 直接开始；
+5. 在 **创作** 中生成内容、视觉方案和图片；
+6. 保存到 **草稿库**，继续创作、导出资料包或加入发布计划。
 
-### 打包
+## 导出资料包
 
-```bash
-npm run build:mac     # macOS
-npm run build:win     # Windows
-npm run build:linux   # Linux
+草稿库中的「导出资料包」会生成如下目录：
+
+```text
+标题_draft-123_YYYYMMDD-HHmmss/
+  稿件.md
+  visual-plan.json
+  images/
+    cover.png
+    content-01.png
+    content-02.png
+  missing-assets.txt
 ```
 
-### 常用脚本
+说明：
+
+- `稿件.md` 使用相对路径引用图片，移动整个目录后仍可正常显示；
+- `visual-plan.json` 保存封面和正文配图方案；
+- 图片缺失时不阻塞导出，会写入 `missing-assets.txt`。
+
+## 常用脚本
 
 ```bash
-npm run dev           # 开发
+npm run dev           # 启动开发
 npm run typecheck     # 类型检查
-npm run lint          # 代码检查
+npm run lint          # ESLint 检查
+npm run build         # 构建
+npm run build:mac     # macOS 打包
+npm run build:win     # Windows 打包
+npm run build:linux   # Linux 打包
 ```
 
 ## 技术栈
 
 - **桌面**：Electron + electron-vite
-- **前端**：React 19 + TypeScript + Tailwind CSS v4 + shadcn 风格组件（Radix）
-- **数据**：本地 SQLite（better-sqlite3）+ Drizzle ORM（应用内版本化迁移）
-- **AI**：多 Provider 抽象（`src/main/ai`），Claude + OpenAI 兼容（DeepSeek）
-- **安全**：API Key 经 Electron `safeStorage` 加密存于本地用户目录；渲染进程经白名单 IPC 访问主进程
+- **前端**：React 19 + TypeScript + Tailwind CSS v4 + Radix UI
+- **状态**：Zustand
+- **数据**：SQLite（better-sqlite3）+ Drizzle ORM + 应用内版本化迁移
+- **AI**：多 Provider 抽象，Claude / OpenAI 兼容 / DeepSeek / OpenAI Images / 火山引擎 Ark
+- **安全**：API Key 本地加密保存；渲染进程通过白名单 IPC 访问主进程
 
 ## 架构
 
-```
+```text
 src/
-├─ shared/types.ts        # 主/渲染共享类型 + IPC 契约（单一事实来源）
+├─ shared/types.ts        # 主/渲染共享类型 + IPC 契约
 ├─ main/                  # 主进程：DB / IPC / AI / 服务 / 密钥
-│  ├─ db/                 #   schema + 版本化迁移
-│  ├─ ai/                 #   provider 接口 + claude / openai 兼容实现 + prompts + 解析
-│  ├─ services/           #   业务逻辑（IPC handler 仅做转发）
-│  └─ ipc/                #   统一 { ok, data | error } 返回
-├─ preload/               # 白名单 window.api（类型见 index.d.ts）
-└─ renderer/src/          # React UI（pages / components/ui / store）
+│  ├─ db/                 # schema + 版本化迁移
+│  ├─ ai/                 # provider 接口、实现、prompts、解析
+│  ├─ services/           # 业务服务
+│  └─ ipc/                # IPC 注册与统一返回
+├─ preload/               # 白名单 window.api
+└─ renderer/src/          # React UI、页面、组件、store
 ```
 
-数据库与密钥位于系统用户数据目录（不随仓库分发）：`<userData>/xhs-factory.db`、`<userData>/secrets.json`。
+本地数据位于系统用户数据目录：
+
+- 数据库：`<userData>/xhs-factory.db`
+- 密钥：`<userData>/secrets.json`
+- 生成图片：`<userData>/assets/images/`
 
 ## 路线图
 
 - **v0.1**：选题 / 创作 / 草稿 / 爆款库 / 多 Provider
-- **v0.2（当前）**：发布记录 / 内容日历 / 手动数据回收 / 复盘看板 / 选题评分 / 公式库 / 合规检查
-- **下一步**：
-  - CSV 导入发布表现数据
-  - Playwright 爬虫 / 第三方数据平台作为可选采集层
-  - 更细的归因分析、选题评分权重配置、多账号
-
-## 说明
-
-本项目为个人自用工具。使用第三方模型/订阅凭证时，请遵守对应服务的使用条款。
+- **v0.2**：发布记录 / 内容日历 / 手动数据回收 / 复盘看板 / 选题评分 / 公式库 / 合规检查
+- **v0.3**：创作诊断、修改建议、版本管理、局部改写
+- **v0.4**：视觉方案、图片生成、草稿图片资产、合规与质量增强
+- **v0.5（当前）**：创作队列、草稿继续创作、火山引擎视觉模型、资料包导出、本地图片安全读取
 
 ## License
 

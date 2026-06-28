@@ -1,20 +1,46 @@
 import Anthropic from '@anthropic-ai/sdk'
-import type { AIProvider, TopicGenContext, ContentGenContext } from './provider'
-import type { GeneratedTopic, GeneratedContent, ViralStructure } from '@shared/types'
+import type {
+  AIProvider,
+  TopicGenContext,
+  ContentGenContext,
+  ContentReviewContext,
+  ContentRewriteContext,
+  SelectionRewriteContext,
+  VisualPlanContext
+} from './provider'
+import type {
+  GeneratedTopic,
+  GeneratedContent,
+  ViralStructure,
+  ContentReview,
+  VisualPlan
+} from '@shared/types'
 import {
   XHS_SYSTEM,
   topicsPrompt,
   contentBodyPrompt,
   contentMetaPrompt,
-  viralAnalyzePrompt
+  viralAnalyzePrompt,
+  contentReviewPrompt,
+  contentRewritePrompt,
+  selectionRewritePrompt,
+  visualPlanPrompt
 } from './prompts'
 import {
   topicsOut,
   metaOut,
+  contentOut,
   structureOut,
+  reviewOut,
+  selectionRewriteOut,
+  visualPlanOut,
   TOPICS_SCHEMA,
   META_SCHEMA,
+  CONTENT_SCHEMA,
   STRUCTURE_SCHEMA,
+  REVIEW_SCHEMA,
+  SELECTION_REWRITE_SCHEMA,
+  VISUAL_PLAN_SCHEMA,
   jsonInstruction,
   parseJson
 } from './parsing'
@@ -107,6 +133,28 @@ export class ClaudeProvider implements AIProvider {
       4000
     )
     return { body, ...meta }
+  }
+
+  async reviewContent(ctx: ContentReviewContext): Promise<ContentReview> {
+    return this.structured(contentReviewPrompt(ctx), REVIEW_SCHEMA, reviewOut, 4000)
+  }
+
+  async rewriteContent(ctx: ContentRewriteContext): Promise<GeneratedContent> {
+    return this.structured(contentRewritePrompt(ctx), CONTENT_SCHEMA, contentOut, 8000)
+  }
+
+  async rewriteSelection(ctx: SelectionRewriteContext): Promise<string> {
+    const out = await this.structured(
+      selectionRewritePrompt(ctx),
+      SELECTION_REWRITE_SCHEMA,
+      selectionRewriteOut,
+      3000
+    )
+    return out.replacement
+  }
+
+  async generateVisualPlan(ctx: VisualPlanContext): Promise<VisualPlan> {
+    return this.structured(visualPlanPrompt(ctx), VISUAL_PLAN_SCHEMA, visualPlanOut, 6000)
   }
 
   async analyzeViral(input: { title: string; body: string }): Promise<ViralStructure> {

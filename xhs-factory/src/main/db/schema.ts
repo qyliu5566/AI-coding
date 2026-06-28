@@ -4,6 +4,8 @@ import type {
   TopicStatus,
   TopicSource,
   DraftStatus,
+  VisualPlan,
+  GeneratedImageAsset,
   ViralStructure,
   PublishStatus,
   ComplianceSeverity
@@ -43,6 +45,11 @@ export const drafts = sqliteTable('drafts', {
   tags: text('tags', { mode: 'json' }).$type<string[]>().notNull().default([]),
   coverCopy: text('cover_copy').notNull().default(''),
   imageIdeas: text('image_ideas', { mode: 'json' }).$type<string[]>().notNull().default([]),
+  visualPlan: text('visual_plan', { mode: 'json' }).$type<VisualPlan | null>(),
+  imageAssets: text('image_assets', { mode: 'json' })
+    .$type<Record<string, GeneratedImageAsset>>()
+    .notNull()
+    .default({}),
   status: text('status').$type<DraftStatus>().notNull().default('draft'),
   createdAt: integer('created_at').notNull().default(now),
   updatedAt: integer('updated_at').notNull().default(now)

@@ -13,6 +13,8 @@ export type IpcResult<T> = IpcOk<T> | IpcErr
 
 // ---------- 领域模型 ----------
 export type ProviderId = 'claude' | 'openai' | 'deepseek'
+export type ImageProviderId = 'openai' | 'volcengine'
+export type SecretProviderId = ProviderId | `image:${ImageProviderId}`
 
 export interface Persona {
   id: number
@@ -52,13 +54,26 @@ export interface Draft {
   tags: string[]
   coverCopy: string // 封面文案
   imageIdeas: string[] // 配图建议
+  visualPlan: VisualPlan | null
+  imageAssets: Record<string, GeneratedImageAsset>
   status: DraftStatus
   createdAt: number
   updatedAt: number
 }
 export type DraftUpdate = Partial<
-  Pick<Draft, 'titleOptions' | 'body' | 'tags' | 'coverCopy' | 'imageIdeas' | 'status'>
+  Pick<
+    Draft,
+    | 'titleOptions'
+    | 'body'
+    | 'tags'
+    | 'coverCopy'
+    | 'imageIdeas'
+    | 'visualPlan'
+    | 'imageAssets'
+    | 'status'
+  >
 >
+export type DraftVisualPayload = Pick<Draft, 'visualPlan' | 'imageAssets'>
 
 export interface ViralStructure {
   hook: string // 标题钩子
@@ -84,6 +99,9 @@ export type ViralSampleInput = Omit<ViralSample, 'id' | 'createdAt' | 'structure
 export interface AppSettings {
   provider: ProviderId
   model: string
+  imageProvider: ImageProviderId
+  imageModel: string
+  imageSize: '1024x1024' | '1024x1536' | '1536x1024' | '2K'
 }
 
 export type PublishStatus = 'planned' | 'published' | 'reviewed' | 'archived'
@@ -206,6 +224,86 @@ export interface GeneratedContent {
   imageIdeas: string[]
 }
 
+export type RevisionTarget = 'title' | 'body' | 'tags' | 'cover' | 'overall'
+
+export interface RevisionSuggestion {
+  id: string
+  title: string
+  reason: string
+  instruction: string
+  target: RevisionTarget
+}
+
+export interface ContentReview {
+  overallScore: number
+  summary: string
+  suggestions: RevisionSuggestion[]
+}
+
+export interface RewriteContentInput {
+  topicId: number
+  currentContent: GeneratedContent
+  suggestions?: RevisionSuggestion[]
+  selectedSuggestionIds?: string[]
+  customInstruction?: string
+}
+
+export interface RewriteSelectionInput {
+  topicId: number
+  currentContent: GeneratedContent
+  selectedText: string
+  customInstruction: string
+}
+
+export interface CoverVisualPlan {
+  title: string
+  subtitle: string
+  layout: string
+  style: string
+  colorPalette: string
+  elements: string[]
+  prompt: string
+}
+
+export interface ContentImagePlan {
+  id: string
+  purpose: string
+  textOverlay: string
+  scene: string
+  composition: string
+  style: string
+  prompt: string
+}
+
+export interface VisualPlan {
+  cover: CoverVisualPlan
+  images: ContentImagePlan[]
+}
+
+export interface GenerateVisualPlanInput {
+  topicId: number
+  content: GeneratedContent
+}
+
+export interface GenerateImageInput {
+  prompt: string
+  kind: 'cover' | 'content'
+  planId: string
+  size?: AppSettings['imageSize']
+}
+
+export interface GeneratedImageAsset {
+  id: string
+  planId: string
+  kind: 'cover' | 'content'
+  localPath: string
+  dataUrl?: string
+  prompt: string
+  model: string
+  size: string
+  createdAt: number
+}
+
 // ---------- AI 调用入参 ----------
 export interface GenerateTopicsInput {
   personaId: number
@@ -300,6 +398,11 @@ export const IPC = {
   },
   ai: {
     generateContent: 'ai:generateContent',
+    reviewContent: 'ai:reviewContent',
+    rewriteContent: 'ai:rewriteContent',
+    rewriteSelection: 'ai:rewriteSelection',
+    generateVisualPlan: 'ai:generateVisualPlan',
+    generateImage: 'ai:generateImage',
     contentChunk: 'ai:content:chunk',
     contentDone: 'ai:content:done',
     contentError: 'ai:content:error'
@@ -307,5 +410,8 @@ export const IPC = {
   exporter: {
     copy: 'export:copy',
     markdown: 'export:markdown'
+  },
+  asset: {
+    imageDataUrl: 'asset:imageDataUrl'
   }
 } as const

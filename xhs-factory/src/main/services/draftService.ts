@@ -11,6 +11,8 @@ const createInput = z.object({
   tags: z.array(z.string()).default([]),
   coverCopy: z.string().default(''),
   imageIdeas: z.array(z.string()).default([]),
+  visualPlan: z.unknown().nullable().default(null),
+  imageAssets: z.record(z.string(), z.unknown()).default({}),
   status: z.enum(['draft', 'final']).default('draft')
 })
 
@@ -21,6 +23,8 @@ const updateInput = z
     tags: z.array(z.string()),
     coverCopy: z.string(),
     imageIdeas: z.array(z.string()),
+    visualPlan: z.unknown().nullable(),
+    imageAssets: z.record(z.string(), z.unknown()),
     status: z.enum(['draft', 'final'])
   })
   .partial()
@@ -34,7 +38,7 @@ export function getDraft(id: number): Draft | null {
 }
 
 export function createDraft(input: unknown): Draft {
-  const data = createInput.parse(input)
+  const data = createInput.parse(input) as Omit<Draft, 'id' | 'createdAt' | 'updatedAt'>
   return getDb().insert(schema.drafts).values(data).returning().get()
 }
 

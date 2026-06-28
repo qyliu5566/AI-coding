@@ -1,7 +1,7 @@
 import { app, safeStorage } from 'electron'
 import { join } from 'path'
 import { readFileSync, writeFileSync, existsSync } from 'fs'
-import type { ProviderId } from '@shared/types'
+import type { SecretProviderId } from '@shared/types'
 
 // API key 用系统级加密(safeStorage)后存本地文件,绝不入库、不进渲染进程、不进 git。
 // 文件格式: { [provider]: <base64 加密串> }
@@ -21,7 +21,7 @@ function writeAll(data: Record<string, string>): void {
   writeFileSync(file(), JSON.stringify(data), { encoding: 'utf-8', mode: 0o600 })
 }
 
-export function setApiKey(provider: ProviderId, key: string): void {
+export function setApiKey(provider: SecretProviderId, key: string): void {
   const all = readAll()
   if (!key) {
     delete all[provider]
@@ -34,7 +34,7 @@ export function setApiKey(provider: ProviderId, key: string): void {
   writeAll(all)
 }
 
-export function getApiKey(provider: ProviderId): string | null {
+export function getApiKey(provider: SecretProviderId): string | null {
   const raw = readAll()[provider]
   if (!raw) return null
   try {
@@ -45,6 +45,6 @@ export function getApiKey(provider: ProviderId): string | null {
   }
 }
 
-export function hasApiKey(provider: ProviderId): boolean {
+export function hasApiKey(provider: SecretProviderId): boolean {
   return !!readAll()[provider]
 }

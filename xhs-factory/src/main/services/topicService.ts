@@ -25,7 +25,10 @@ const genInput = z.object({
 
 export function listTopics(personaId?: number): Topic[] {
   const db = getDb()
-  const q = db.select().from(schema.topics).orderBy(desc(schema.topics.createdAt))
+  const q = db
+    .select()
+    .from(schema.topics)
+    .orderBy(desc(schema.topics.createdAt), desc(schema.topics.id))
   const rows = personaId ? q.where(eq(schema.topics.personaId, personaId)).all() : q.all()
   return rows
 }

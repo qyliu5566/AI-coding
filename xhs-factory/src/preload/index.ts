@@ -69,9 +69,17 @@ const api = {
     copy: (text: string) => invoke(IPC.exporter.copy, text),
     markdown: (draftId: number) => invoke(IPC.exporter.markdown, draftId)
   },
+  asset: {
+    imageDataUrl: (localPath: string) => invoke(IPC.asset.imageDataUrl, localPath)
+  },
   ai: {
     generateContent: (input: { requestId: string; topicId: number; sampleIds?: number[] }) =>
       invoke(IPC.ai.generateContent, input),
+    reviewContent: (input: unknown) => invoke(IPC.ai.reviewContent, input),
+    rewriteContent: (input: unknown) => invoke(IPC.ai.rewriteContent, input),
+    rewriteSelection: (input: unknown) => invoke(IPC.ai.rewriteSelection, input),
+    generateVisualPlan: (input: unknown) => invoke(IPC.ai.generateVisualPlan, input),
+    generateImage: (input: unknown) => invoke(IPC.ai.generateImage, input),
     // 订阅流式正文增量，返回取消订阅函数
     onContentChunk: (cb: (e: ContentChunkEvent) => void): (() => void) => {
       const listener = (_: unknown, payload: ContentChunkEvent): void => cb(payload)

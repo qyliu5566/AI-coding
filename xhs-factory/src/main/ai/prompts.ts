@@ -1,4 +1,11 @@
-import type { Persona, ViralSample, Topic, FormulaPattern } from '@shared/types'
+import type {
+  GeneratedContent,
+  Persona,
+  RevisionSuggestion,
+  ViralSample,
+  Topic,
+  FormulaPattern
+} from '@shared/types'
 
 // 所有 prompt 模板集中在此，与代码解耦，便于持续迭代。
 
@@ -119,4 +126,136 @@ ${input.body}
 - opening：开头是如何抓住读者的
 - structure：正文的整体结构脉络
 - cta：结尾的行动号召方式`
+}
+
+function contentBlock(content: GeneratedContent): string {
+  return [
+    `标题候选：${content.titleOptions.join(' / ')}`,
+    `正文：\n${content.body}`,
+    `标签：${content.tags.map((t) => `#${t}`).join(' ')}`,
+    `封面文案：${content.coverCopy}`,
+    `配图建议：${content.imageIdeas.join('；')}`
+  ].join('\n\n')
+}
+
+export function contentReviewPrompt(ctx: {
+  persona: Persona
+  topic: Topic
+  content: GeneratedContent
+}): string {
+  return `${personaBlock(ctx.persona)}
+
+请诊断下面这篇小红书笔记，重点看：
+- 标题钩子是否足够强
+- 开头是否能快速击中痛点
+- 正文结构是否清晰、有信息增量
+- 语气是否符合账号人设和平台调性
+- CTA 是否自然
+- 标签和封面文案是否有搜索/点击价值
+
+选题：${ctx.topic.title}
+切入角度：${ctx.topic.angle}
+
+当前稿件：
+${contentBlock(ctx.content)}
+
+请输出 4~8 条可勾选的修改建议。每条建议必须能直接转化成改写指令。`
+}
+
+export function contentRewritePrompt(ctx: {
+  persona: Persona
+  topic: Topic
+  content: GeneratedContent
+  suggestions: RevisionSuggestion[]
+  customInstruction: string
+}): string {
+  const selected = ctx.suggestions.length
+    ? ctx.suggestions
+        .map((s, i) => `${i + 1}. ${s.title}：${s.instruction}（原因：${s.reason}）`)
+        .join('\n')
+    : '无'
+  const custom = ctx.customInstruction.trim() || '无'
+
+  return `${personaBlock(ctx.persona)}
+
+请基于当前稿件进行一次完整改写，而不是重新偏题创作。
+
+选题：${ctx.topic.title}
+切入角度：${ctx.topic.angle}
+钩子：${ctx.topic.hook}
+
+当前稿件：
+${contentBlock(ctx.content)}
+
+用户勾选的修改建议：
+${selected}
+
+用户自定义修改要求：
+${custom}
+
+改写要求：
+- 必须保留原选题方向和核心观点
+- 同时满足勾选建议和自定义要求
+- 输出完整可发布的小红书笔记内容
+- 重新生成 titleOptions、body、tags、coverCopy、imageIdeas
+- 正文保持口语化、短句分段、有信息增量，避免空泛套话`
+}
+
+export function selectionRewritePrompt(ctx: {
+  persona: Persona
+  topic: Topic
+  content: GeneratedContent
+  selectedText: string
+  customInstruction: string
+}): string {
+  return `${personaBlock(ctx.persona)}
+
+请只改写用户选中的这段文字，并保持它能自然放回原文中。不要输出全文，不要解释。
+
+选题：${ctx.topic.title}
+切入角度：${ctx.topic.angle}
+
+完整稿件上下文：
+${contentBlock(ctx.content)}
+
+选中文本：
+${ctx.selectedText}
+
+局部修改要求：
+${ctx.customInstruction}
+
+输出要求：
+- 只返回替换后的片段
+- 保持和上下文语气一致
+- 如果用户要求缩短/扩写/更口语化/更专业，严格按要求处理
+- 不要添加 Markdown 代码块或额外说明`
+}
+
+export function visualPlanPrompt(ctx: {
+  persona: Persona
+  topic: Topic
+  content: GeneratedContent
+}): string {
+  return `${personaBlock(ctx.persona)}
+
+请基于当前小红书笔记生成一套强相关视觉方案，用于封面图和正文配图。不要给泛泛的氛围图，每张图都必须服务内容表达。
+
+选题：${ctx.topic.title}
+切入角度：${ctx.topic.angle}
+钩子：${ctx.topic.hook}
+
+当前稿件：
+${contentBlock(ctx.content)}
+
+请输出：
+1. cover：一个适合小红书首图的封面标题图方案
+2. images：3~6 张正文配图方案，优先覆盖痛点场景、对比图、步骤/清单图、结果图、总结图
+
+硬性要求：
+- 封面 title ≤ 14 字，subtitle ≤ 18 字
+- 每张正文图 textOverlay ≤ 20 字
+- prompt 必须能直接给图像模型使用，包含主体、构图、背景、风格、文字区域建议
+- 画面主体明确，避免“高级感背景”“抽象氛围”等空泛描述
+- 风格适合小红书图文笔记，真实、干净、可读性强
+- 不要使用夸张功效承诺或平台敏感表达`
 }

@@ -10,7 +10,14 @@ import * as publish from '../services/publishService'
 import * as analytics from '../services/analyticsService'
 import * as formula from '../services/formulaService'
 import * as compliance from '../services/complianceService'
-import { generateContent } from '../services/contentService'
+import * as visual from '../services/visualService'
+import * as assets from '../services/assetService'
+import {
+  generateContent,
+  reviewContent,
+  rewriteContent,
+  rewriteSelection
+} from '../services/contentService'
 import { hasApiKey, setApiKey } from '../secrets'
 import { getDb, schema } from '../db/client'
 import { eq } from 'drizzle-orm'
@@ -108,6 +115,9 @@ export function registerIpc(): void {
     return exporter.exportMarkdown(draft)
   })
 
+  // ---- 本地资产 ----
+  handle(IPC.asset.imageDataUrl, (_e, localPath: string) => assets.imageDataUrl(localPath))
+
   // ---- AI 创作（流式正文）----
   handle(
     IPC.ai.generateContent,
@@ -119,4 +129,9 @@ export function registerIpc(): void {
       })
     }
   )
+  handle(IPC.ai.reviewContent, (_e, input) => reviewContent(input))
+  handle(IPC.ai.rewriteContent, (_e, input) => rewriteContent(input))
+  handle(IPC.ai.rewriteSelection, (_e, input) => rewriteSelection(input))
+  handle(IPC.ai.generateVisualPlan, (_e, input) => visual.generateVisualPlan(input))
+  handle(IPC.ai.generateImage, (_e, input) => visual.generateImage(input))
 }

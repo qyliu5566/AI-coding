@@ -92,6 +92,7 @@ export default function TopicsPage(): React.JSX.Element {
     try {
       const updated = await unwrap(window.api.topic.setStatus(t.id, status))
       setTopics((prev) => prev.map((x) => (x.id === t.id ? updated : x)))
+      if (status === 'selected') toast.success('已加入创作队列')
     } catch (e) {
       toast.error((e as Error).message)
     }
@@ -115,7 +116,7 @@ export default function TopicsPage(): React.JSX.Element {
     <div>
       <PageHeader
         title="选题工作台"
-        description="选择人设，让 AI 产出有爆款潜质的选题"
+        description="批量生成候选选题，挑选值得创作的方向"
         actions={
           personas.length > 0 && (
             <Select
@@ -151,7 +152,6 @@ export default function TopicsPage(): React.JSX.Element {
           />
         ) : (
           <>
-            {/* 生成控制区 */}
             <Card>
               <CardContent className="space-y-3 pt-5">
                 <div className="flex flex-wrap items-end gap-3">
@@ -221,7 +221,6 @@ export default function TopicsPage(): React.JSX.Element {
               </CardContent>
             </Card>
 
-            {/* 选题列表 */}
             {topics.length === 0 ? (
               <EmptyState
                 icon={<Sparkles className="h-8 w-8" />}
@@ -234,8 +233,8 @@ export default function TopicsPage(): React.JSX.Element {
                   <Card key={t.id}>
                     <CardContent className="pt-5">
                       <div className="flex items-start justify-between gap-4">
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
+                        <div className="min-w-0 flex-1 space-y-2">
+                          <div className="flex flex-wrap items-center gap-2">
                             <span className="font-medium">{t.title}</span>
                             <Badge variant={t.status === 'selected' ? 'default' : 'muted'}>
                               {STATUS_LABEL[t.status]}
@@ -275,7 +274,7 @@ export default function TopicsPage(): React.JSX.Element {
                               <Check className="h-4 w-4" />
                               选用
                             </Button>
-                          ) : (
+                          ) : t.status === 'selected' ? (
                             <Button
                               size="sm"
                               variant="outline"
@@ -283,7 +282,7 @@ export default function TopicsPage(): React.JSX.Element {
                             >
                               取消选用
                             </Button>
-                          )}
+                          ) : null}
                           <Button size="sm" variant="ghost" onClick={() => remove(t)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>

@@ -1,11 +1,14 @@
 import type {
   GeneratedTopic,
   GeneratedContent,
+  ContentReview,
+  VisualPlan,
   ViralStructure,
   Persona,
   Topic,
   ViralSample,
-  FormulaPattern
+  FormulaPattern,
+  RevisionSuggestion
 } from '@shared/types'
 
 // 选题生成上下文（已解析好的领域对象，Provider 只管调用模型）
@@ -25,6 +28,24 @@ export interface ContentGenContext {
   samples: ViralSample[]
 }
 
+export interface ContentReviewContext {
+  persona: Persona
+  topic: Topic
+  content: GeneratedContent
+}
+
+export interface ContentRewriteContext extends ContentReviewContext {
+  suggestions: RevisionSuggestion[]
+  customInstruction: string
+}
+
+export interface SelectionRewriteContext extends ContentReviewContext {
+  selectedText: string
+  customInstruction: string
+}
+
+export interface VisualPlanContext extends ContentReviewContext {}
+
 // 统一的 AI Provider 接口。新增模型只需实现这个接口，不动调用方。
 export interface AIProvider {
   readonly id: string
@@ -34,5 +55,9 @@ export interface AIProvider {
     ctx: ContentGenContext,
     onDelta: (delta: string) => void
   ): Promise<GeneratedContent>
+  reviewContent(ctx: ContentReviewContext): Promise<ContentReview>
+  rewriteContent(ctx: ContentRewriteContext): Promise<GeneratedContent>
+  rewriteSelection(ctx: SelectionRewriteContext): Promise<string>
+  generateVisualPlan(ctx: VisualPlanContext): Promise<VisualPlan>
   analyzeViral(input: { title: string; body: string }): Promise<ViralStructure>
 }
